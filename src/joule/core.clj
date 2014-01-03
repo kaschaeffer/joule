@@ -1,9 +1,30 @@
 (ns joule.core)
 
-(defn foo
-  "I don't do a whole lot."
-  [x]
-  (println x "Hello, World!"))
+; How does the tree stop splitting?
+;
+; 1. Node is pure (available from data)
+; 2. Sample size of node is too small (available from data)
+; 3. Infogain from new feature is too small in absolute terms (should be availabel from find-best-split)
+; 4. Tree hits maximum depth (TODO info is not easily available in current implementation)
+;
+; Scikit-learn has: max_depth,
+; min_samples_split,
+; min_samples_leaf - TODO understand this criterion.  According to scikit-learn documentation this is "minimum number of samples required to be at a leaf node" 
+; min_density, 
+; max_features - which features to consider when making split (will be important
+;   for random forest implementation (can be # or function of total features i.e. 
+;   "log", "sqrt", etc...
+
+; structure of tree
+; [[:feature-name split-value] left-node right-node]
+
+(defn build-tree [data]
+  (if-let [[best-split-name best-split-value] (find-best-split data)]
+    (let [left-node-data right-node-data] (make-split data best-split-name best-split-value)
+      [[best-split-name best-split-value] (build-tree left-node-data) (build-tree right-node-data)])
+    data))
+
+(def foo [nil nil])
 
 ; TODO refactor to use multimethods below
 (defn find-best-split [feature_data]
