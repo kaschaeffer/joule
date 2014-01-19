@@ -1,5 +1,9 @@
 (ns joule.core)
 
+; (declare find-best-split)
+; (declare best-split-value)
+(declare evaluate-split)
+
 ; How does the tree stop splitting?
 ;
 ; 1. Node is pure (available from data)
@@ -18,36 +22,80 @@
 ; structure of tree
 ; [[:feature-name split-value] left-node right-node]
 
-(defn build-tree [data]
-  (if-let [[best-split-name best-split-value] (find-best-split data)]
-    (let [left-node-data right-node-data] (make-split data best-split-name best-split-value)
-      [[best-split-name best-split-value] (build-tree left-node-data) (build-tree right-node-data)])
-    data))
+; (defn build-tree [data]
+;   (if-let [[best-split-name best-split-value] (find-best-split data)]
+;     (let [left-node-data right-node-data] (make-split data best-split-name best-split-value)
+;       [[best-split-name best-split-value] (build-tree left-node-data) (build-tree right-node-data)])
+;     data))
 
-(def foo [nil nil])
 
 ; TODO refactor to use multimethods below
-(defn find-best-split [feature_data]
-  "For a given feature, finds the best possible split.
-  
-  Deals correctly with both numerical and categorical data - the type
-  is specified in the metadata of the list."
 
-  ; first get the metadata in a let expression
-  ; then use case to check
-  (let [feature_type (get (meta feature_data) :type :numerical)]
-    (if (nil? metadata)
-      (find-best-split-numerical data_list)
-      (let [metadata_type (metadata :type)])
-      (cond 
-        (= feature_type :categorical) (find-best-split-categorical data_list)
-        (= feature_type :numerical) (find-best-split-numerical data_list)
-        :else
-          (throw UnsupportedOperationException. 
-                 (format "feature type not supported %s" feature_type))))
-  
+(defn get-feature-type [feature-data]
+  (get (meta feature-data) :type :numerical))
+
+(defmulti find-best-split
+  (fn [feature-data label-data] (get-feature-type feature-data)))
+
+(defmethod find-best-split :categorical
+  [feature-data label-data]
   )
-)
+
+
+
+(defmethod find-best-split :numerical
+  [feature-data label-data]
+
+  ; first sort the data
+  ; then step through all possible splits
+  (let [sorted-features (sort feature-data)
+        features-with-labels (map list feature-data label-data)]
+    (apply min (map (fn [split-value] (evaluate-split split-value features-with-labels criterion)) features-with-labels)))
+  )
+
+(split-with #(> % 2) (reverse (sort (list 9 1 2 3 100))))
+
+(split-with #(<= (first %) 2) (list [1 :z] [2 :z] [10 :b] [12 :c]))
+
+(apply map list (list [1 :a] [2 :b] [3 :c] [4 :d]))
+
+(defn evaluate-split [split-value data criterion]
+  (->> data
+       (split-with #(>= split-value (first %)))
+       (map #(apply map list %))
+       (map second)
+       (map criterion)
+       (reduce +)
+       ))
+
+(apply min (list 1 9 -100 8123))
+
+; (defmethod find-best-split :default
+;   [feature-data label-data]
+;   (throw UnsupportedOperationException. 
+;          (format "feature type not supported %s" (get-feature-type feature-data))))
+
+; (defn find-best-split [feature_data]
+;   "For a given feature, finds the best possible split.
+  
+;   Deals correctly with both numerical and categorical data - the type
+;   is specified in the metadata of the list."
+
+;   ; first get the metadata in a let expression
+;   ; then use case to check
+;   (let [feature_type (get (meta feature_data) :type :numerical)]
+;     (if (nil? metadata)
+;       (find-best-split-numerical data_list)
+;       (let [metadata_type (metadata :type)]
+;       (cond 
+;         (= feature_type :categorical) (find-best-split-categorical data_list)
+;         (= feature_type :numerical) (find-best-split-numerical data_list)
+;         :else
+;           (throw UnsupportedOperationException. 
+;                  (format "feature type not supported %s" feature_type)))))
+  
+;   )
+; )
 
 ; what format should feature_data take:
 ; Possibilities:
@@ -68,11 +116,11 @@
 ;
 ; TODO should I just be passing frequencies instead??
 ;
-(let [category-groups (seq (group-by first (map vector feature-data label-data)))]
-     []
-  ([category-names (map first category-groups)]
-       [category-data (map #(map first  (second %)) category-groups)])
-    (min ()))
+; (let [category-groups (seq (group-by first (map vector feature-data label-data)))]
+;      []
+;   ([category-names (map first category-groups)]
+;        [category-data (map #(map first  (second %)) category-groups)])
+;     (min ()))
 
 (defn find-best-feature [data]
   "Find the best possible split of the data.
